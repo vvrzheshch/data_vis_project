@@ -1,7 +1,8 @@
-# shiny::runGitHub('data_vis_project', 'vvrzheshch')
+# Data Visualization project
 
-## Alice Zhao
-## Valentin Vrzheshch
+#### Alice Zhao
+#### Valentin Vrzheshch
 
-### Data Visualization project
+_shiny::runGitHub('data_vis_project', 'vvrzheshch')_
+
 
