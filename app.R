@@ -97,9 +97,9 @@ server <- function(input, output) {
    })
    
    output$par_plot <- renderPlot({
-     df_2 <- na.omit(sub_df()[, c("Country", "Population", "Gross national savings", "General government total expenditure", "Population")])
+     df_2 <- na.omit(sub_df()[, c("Population", "Gross national savings", "Population")])
      # ggparcoord(data = df_2, scale = 'uniminmax', groupColumn = "Country", scaleSummary = "mean")
-     ggparcoord(data = df_2, scale = 'uniminmax', scaleSummary = "mean", splineFactor = 10)#, groupColumn = "Country")
+     ggparcoord(data = df_2, scale = 'uniminmax', scaleSummary = "mean", splineFactor = F)#, groupColumn = "Country")
      
    })
 }
