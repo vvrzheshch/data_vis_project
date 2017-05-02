@@ -8,6 +8,8 @@ cat("\014")
 library(shiny)
 library(tidyr)
 library(reshape2)
+library(directlabels)
+library(ggthemes)
 # library(plyr)
 
 
@@ -43,7 +45,7 @@ library(GGally)
 ui <- fluidPage(
    
    # Application title
-   titlePanel("Old Faithful Geyser Data"),
+   titlePanel("Data Viz Project VV & AZ"),
    
    # Sidebar with a slider input for number of bins 
    sidebarLayout(
@@ -59,10 +61,13 @@ ui <- fluidPage(
       
       # Show a plot of the generated distribution
       mainPanel(
-        plotlyOutput("Bubble.Plot"),
-        plotOutput("par_plot")
+        tabsetPanel(
+          tabPanel("bubble plot",plotlyOutput("Bubble.Plot")),
+          tabPanel("parallel coordinates plot", plotOutput("par_plot")
+        )
       )
    )
+)
 )
 
 # Define server logic required to draw a histogram
@@ -97,9 +102,13 @@ server <- function(input, output) {
    })
    
    output$par_plot <- renderPlot({
-     df_2 <- na.omit(sub_df()[, c("Country", "Population",  "Employment", "Gross national savings", "Gross domestic product, constant prices", "Current account balance","Total investment")])
+     df_2 <- na.omit(sub_df()[, c("Country", "Population",  "Employment", "Gross national savings", "Gross domestic product, constant prices","Total investment")])
+     colnames(df_2)[5] <- 'GDP'
      # ggparcoord(data = df_2, scale = 'uniminmax', groupColumn = "Country", scaleSummary = "mean")
-     ggparcoord(data = df_2, columns = 2:ncol(df_2), scale = 'uniminmax', scaleSummary = "mean", splineFactor = F, groupColumn = "Country")
+     ggparcoord(data = df_2, columns = 2:ncol(df_2), scale = 'uniminmax', scaleSummary = "mean", splineFactor = F, groupColumn = "Country") +
+       geom_dl(aes(label = Country), method = list(dl.combine("first.points", "last.points"), cex = 0.8)) +  
+       theme_gdocs() + scale_color_gdocs(guide=FALSE) + 
+       theme(axis.title = element_blank())
      
    })
 }
