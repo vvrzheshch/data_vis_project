@@ -23,8 +23,8 @@ library(googleCharts)
 # library(plyr)
 
 
-#setwd('~/Google Drive/MSAN2017/SPRING_2017/MSAN-622-02_Data_and_Information_Visualization/project/data_vis_project/')
-setwd('~/workdata/data_vis_project/')
+setwd('~/Google Drive/MSAN2017/SPRING_2017/MSAN-622-02_Data_and_Information_Visualization/project/data_vis_project/')
+#setwd('~/workdata/data_vis_project/')
 df <- read.csv('WEOApr2017all.xls', sep = "\t", stringsAsFactors = F, na.strings = c("NA", "", "--"))
 
 
@@ -62,7 +62,25 @@ df.dcast$year <- as.numeric(levels(df.dcast$year)[df.dcast$year])
 
 china2 <- df.dcast[df.dcast$Country == 'China',]
 
+# Remove less important columns
 
+skip = c(                                                                                             
+  "GDP corresponding to fiscal year, current prices-National currency-Billions",                 
+  "GDP per capita, constant prices-National currency-Units",                                              
+  "GDP per capita, current prices-National currency-Units",                                                 
+  "GDP, constant prices-National currency-Billions",                                                          
+  "GDP, current prices-National currency-Billions",                                                     
+  "General government gross debt-National currency-Billions",                        
+  "General government net debt-National currency-Billions",                      
+  "General government net lending/borrowing-National currency-Billions",          
+  "General government primary net lending/borrowing-National currency-Billions",            
+  "General government revenue-National currency-Billions",                              
+  "General government structural balance-National currency-Billions",                               
+  "General government total expenditure-National currency-Billions",                                        
+  "Implied PPP conversion rate-National currency per current international dollar-"                          
+)
+
+df.dcast <- df.dcast[, !(names(df.dcast) %in% skip)]
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -94,8 +112,8 @@ ui <- fluidPage(
                      sliderInput("year", "Year",
                                  min = min(df.dcast$year), max = max(df.dcast$year),
                                  value = min(df.dcast$year), animate = TRUE),
-           selectInput("x", label = h3("Select x-axis:"), choices = unique(df$Subject), selected = 'Population'),
-           selectInput("y", label = h3("Select y-axis:"), choices = unique(df$Subject), selected = "Employment")
+           selectInput("x", label = h3("Select x-axis:"), choices = names(df.dcast), selected = 'Population'), #choices = unique(df$Subject)
+           selectInput("y", label = h3("Select y-axis:"), choices = names(df.dcast), selected = "Employment")
        )
      )
 )
@@ -174,9 +192,10 @@ server <- function(input, output) {
 
    })
   output$map <- renderGvis({
-    subset <- df.dcast[df.dcast$year == input$year,c("Country","Population")]
-    map <- gvisGeoChart(subset, locationvar="Country", 
-                   colorvar="Population",options=list(projection="kavrayskiy-vii",displayMode="regions",height = 600, width = 900))
+    # subset <- df.dcast[df.dcast$year == input$year,c("Country","Population")]
+    map <- gvisGeoChart(sub_df(), locationvar="Country", 
+                   colorvar=input$x,
+                   options=list(projection="kavrayskiy-vii", displayMode="regions",height = 600, width = 900))
     return(map)})
 }
 
