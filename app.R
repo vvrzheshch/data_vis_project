@@ -10,13 +10,24 @@ library(tidyr)
 library(reshape2)
 library(directlabels)
 library(ggthemes)
+library(plotly)
+library(ggplot2)
+library(GGally)
+
+# More info:
+#   https://github.com/jcheng5/googleCharts
+# Install:
+#   devtools::install_github("jcheng5/googleCharts")
+library(googleCharts)
 # library(plyr)
 
 
 # setwd('~/Google Drive/MSAN2017/SPRING_2017/MSAN-622-02_Data_and_Information_Visualization/project/data_vis_project/')
 df <- read.csv('WEOApr2017all.xls', sep = "\t", stringsAsFactors = F, na.strings = c("NA", "", "--"))
 
-df.melt <- melt(df, id=c("Country", "Subject.Descriptor"))
+df.melt <- melt(df[, !(names(df) %in% c('Region', "Subject.Notes",      "Units", "Scale"))],
+                id=c("Country", "Subject.Descriptor"))
+
 # df.melt <- cast(df, id=c("Country", "Subject.Descriptor"))
 # df.dcast <- dcast(df.melt, value ~ Country + Subject.Descriptor + variable) 
 
@@ -28,18 +39,8 @@ df.dcast <- dcast(df.melt, Country + year ~ Subject.Descriptor, value.var="value
 df.dcast$year <- as.numeric(gsub("[^0-9\\.]", "", df.dcast$year)) 
 # df.dcast <- dcast(df.melt, Country + year ~ Subject.Descriptor, value.var="value")
 
-
-# df.wide <- spread(df.melt, Subject.Descriptor, value)
-# df.wide$year <- as.numeric(gsub("[^0-9\\.]", "", df.wide$year)) 
-# df.wide <- spread(df, c('Country', 'Subject.Descriptor', 'Units', 'Scale'), value)
-
-
-# df.melt <- melt(df, id=c("Country", "Subject.Descriptor", "Subject.Notes", "Units", "Scale"))
-# # df.melt <- melt(df, id=c("Country", "Subject.Notes", "Units", "Scale"))
-# df.cast <- cast(df.melt, Country + Units  ~ Subject.Descriptor )
-
-library(ggplot2)
-library(GGally)
+df.final <- merge(df.dcast, unique(df[, c('Country', 'Region')]), all.x=T, by.x = 'Country', by.y = 'Country')
+colnames(df.final)[which(names(df.final) == "Gross domestic product based on purchasing-power-parity (PPP) per capita GDP")] <- "GDP"
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -63,19 +64,29 @@ ui <- fluidPage(
       mainPanel(
         tabsetPanel(
           tabPanel("bubble plot",plotlyOutput("Bubble.Plot")),
-          tabPanel("parallel coordinates plot", plotOutput("par_plot")
-        )
-      )
+          tabPanel("parallel coordinates plot", plotOutput("par_plot")),
+          tabPanel("Google Chart",
+                   # This line loads the Google Charts JS library
+                   # googleChartsInit(chartTypes = 'sankey'), 
+                   googleChartsInit(),
+                   #   googleChartsInit(chartTypes = c("ALL", "annotatedtimeline", "area", "bar", "bubble", "calendar", "candlestick", "column", "combo", "gauge", "geo", "geomap", "intensitymap", "line", "map", "motion", "org", "pie", "sankey", "scatter", "steppedarea", "table", "timeline", "treemap"))
+                   googleBubbleChart("google_chart", width = '100%', height='600px',
+                         options = list(fontName = "Comic Sans", fontSize = 11
+                        )
+                  )
+          )
+       )
+     )
    )
 )
-)
+
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-  sub_df <- reactive({df.dcast[df.dcast$year == input$year, ]})
+  sub_df <- reactive({df.final[df.final$year == input$year, ]})
    
    output$Bubble.Plot <- renderPlotly({
-     plot_ly(sub_df(), x = ~get(input$x), y = ~get(input$y), color = ~Country, size=~Population) %>%
+     plot_ly(sub_df(), x = ~get(input$x), y = ~get(input$y), color = ~Region, size=~Population) %>%
      layout(xaxis =  list(title = input$x, showgrid = T), yaxis = list(title = input$y, showgrid = T)) 
      # , colors = colors,
      #              type = 'scatter', mode = 'markers', sizes = c(min(data_2007$size), max(data_2007$size)),
@@ -102,14 +113,34 @@ server <- function(input, output) {
    })
    
    output$par_plot <- renderPlot({
-     df_2 <- na.omit(sub_df()[, c("Country", "Population",  "Employment", "Gross national savings", "Gross domestic product, constant prices","Total investment")])
-     colnames(df_2)[5] <- 'GDP'
+     df_2 <- na.omit(sub_df()[, c("Region", "Country", "Population",  "Employment", "Gross national savings", "Gross domestic product, constant prices","Total investment")])
+     # colnames(df_2)[5] <- 'GDP'
      # ggparcoord(data = df_2, scale = 'uniminmax', groupColumn = "Country", scaleSummary = "mean")
-     ggparcoord(data = df_2, columns = 2:ncol(df_2), scale = 'uniminmax', scaleSummary = "mean", splineFactor = F, groupColumn = "Country") +
+     ggparcoord(data = df_2, columns = 3:ncol(df_2), scale = 'uniminmax', scaleSummary = "mean", splineFactor = F, groupColumn = "Region") +
        geom_dl(aes(label = Country), method = list(dl.combine("first.points", "last.points"), cex = 0.8)) +  
        theme_gdocs() + scale_color_gdocs(guide=FALSE) + 
        theme(axis.title = element_blank())
-     
+   })
+  
+  output$google_chart <- reactive({
+    # Filter to the desired year, and put the columns
+    # in the order that Google's Bubble Chart expects
+    # them (name, x, y, color, size). Also sort by region
+    # so that Google Charts orders and colors the regions
+    # consistently.
+  list(
+    data = googleDataTable(sub_df()[, c('Country', input$x, input$y, 'Region', 'Population')]),
+    options = list(
+      title = paste0(input$x, " vs. ", input$y, " for year ", input$year),
+      # Set axis labels and ranges
+      hAxis = list(title = input$x, viewWindow = xlim),
+      vAxis = list(title = input$y, viewWindow = ylim)
+      # title = "Panda"
+      # series = series
+    )
+  )
+    # sub_df()[, c('Country', input$x, input$y, 'Country', 'Population')]
+
    })
 }
 
