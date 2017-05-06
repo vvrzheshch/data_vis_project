@@ -23,8 +23,8 @@ library(googleCharts)
 # library(plyr)
 
 
-setwd('~/Google Drive/MSAN2017/SPRING_2017/MSAN-622-02_Data_and_Information_Visualization/project/data_vis_project/')
-#setwd('~/workdata/data_vis_project/')
+#setwd('~/Google Drive/MSAN2017/SPRING_2017/MSAN-622-02_Data_and_Information_Visualization/project/data_vis_project/')
+setwd('~/workdata/data_vis/data_vis_project/')
 df <- read.csv('WEOApr2017all.xls', sep = "\t", stringsAsFactors = F, na.strings = c("NA", "", "--"))
 
 
