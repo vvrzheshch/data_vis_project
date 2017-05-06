@@ -25,62 +25,66 @@ library(googleCharts)
 
 #setwd('~/Google Drive/MSAN2017/SPRING_2017/MSAN-622-02_Data_and_Information_Visualization/project/data_vis_project/')
 setwd('~/workdata/data_vis/data_vis_project/')
-df <- read.csv('WEOApr2017all.xls', sep = "\t", stringsAsFactors = F, na.strings = c("NA", "", "--"))
+# df <- read.csv('WEOApr2017all.xls', sep = "\t", stringsAsFactors = F, na.strings = c("NA", "", "--"))
 
+df <- read.csv('trade.csv',stringsAsFactors = FALSE)
 
-metadata <- unique(df[,c(3:7)])
-metadata <- metadata[with(metadata, order(c(Subject, Units,Scale))), ]
-metadata <- unique(metadata)[-1,]
-metadata$Subject.Descriptor[metadata$Subject == "Gross domestic product per capita, current prices-U.S. dollars-Units"] <- 'GDP'
+df <- df[df$Flow_Code == 'X',c('Reporter_code','Partner_code','Value')]
+data <- df[sample(nrow(df), 50), ]
 
-df_new <- df[,-c(4:7)]
-colnames(df_new)[4:46] <- 1980:2022
+plot(data$Report_code, data$Value)
 
-china0 <- df_new[df_new$Country =='China',]
-df.melt <- melt(df_new,id=c("Country","Region","Subject"))
-#df.melt$value <- as.numeric(df.melt$value)
-china1 <- df.melt[df.melt$Country=='China',]
-names(df.melt)[names(df.melt)=="variable"] <- "year"
-df.dcast <- dcast(df.melt, Country + year + Region ~ Subject)
-#df.dcast[,4:47] <- sub(",","",df.dcast[,4:47])
-#df.dcast$Population <- as.numeric(gsub(",","",df.dcast$Population))
-df.dcast[is.na(df.dcast)] <- 0
+unique(data$Partner_code)
+unique(data$Partner_description)
+unique(data$Reporter_description)
 
-#colnames(df.dcast)[4:47] <- metadata$Subject.Descriptor
-cols <- colnames(df.dcast)[4:47]
-#sub(",","",df.dcast[,4:47])
-
-for (col in cols) {
-  #print (col)
-  if (any(mapply(grepl, pattern=',', x=df.dcast[,col])))
-  {df.dcast[,col]<- as.numeric(gsub(",","",df.dcast[,col]))}
-  else {df.dcast[,col] <- as.numeric(df.dcast[,col])}
-}
-
-df.dcast$year <- as.numeric(levels(df.dcast$year)[df.dcast$year])
-#as.integer(as.character(df.dcast$Year))
-
-china2 <- df.dcast[df.dcast$Country == 'China',]
-
-# Remove less important columns
-
-skip = c(                                                                                             
-  "GDP corresponding to fiscal year, current prices-National currency-Billions",                 
-  "GDP per capita, constant prices-National currency-Units",                                              
-  "GDP per capita, current prices-National currency-Units",                                                 
-  "GDP, constant prices-National currency-Billions",                                                          
-  "GDP, current prices-National currency-Billions",                                                     
-  "General government gross debt-National currency-Billions",                        
-  "General government net debt-National currency-Billions",                      
-  "General government net lending/borrowing-National currency-Billions",          
-  "General government primary net lending/borrowing-National currency-Billions",            
-  "General government revenue-National currency-Billions",                              
-  "General government structural balance-National currency-Billions",                               
-  "General government total expenditure-National currency-Billions",                                        
-  "Implied PPP conversion rate-National currency per current international dollar-"                          
-)
-
-df.dcast <- df.dcast[, !(names(df.dcast) %in% skip)]
+##### PREVIOUS DATA #########
+# metadata <- unique(df[,c(3:7)])
+# metadata <- metadata[with(metadata, order(c(Subject, Units,Scale))), ]
+# metadata <- unique(metadata)[-1,]
+# metadata$Subject.Descriptor[metadata$Subject == "Gross domestic product per capita, current prices-U.S. dollars-Units"] <- 'GDP'
+# 
+# df_new <- df[,-c(4:7)]
+# colnames(df_new)[4:46] <- 1980:2022
+# 
+# china0 <- df_new[df_new$Country =='China',]
+# df.melt <- melt(df_new,id=c("Country","Region","Subject"))
+# china1 <- df.melt[df.melt$Country=='China',]
+# names(df.melt)[names(df.melt)=="variable"] <- "year"
+# df.dcast <- dcast(df.melt, Country + year + Region ~ Subject)
+# df.dcast[is.na(df.dcast)] <- 0
+# 
+# cols <- colnames(df.dcast)[4:47]
+# 
+# for (col in cols) {
+#   if (any(mapply(grepl, pattern=',', x=df.dcast[,col])))
+#   {df.dcast[,col]<- as.numeric(gsub(",","",df.dcast[,col]))}
+#   else {df.dcast[,col] <- as.numeric(df.dcast[,col])}
+# }
+# 
+# df.dcast$year <- as.numeric(levels(df.dcast$year)[df.dcast$year])
+# 
+# china2 <- df.dcast[df.dcast$Country == 'China',]
+# 
+# # Remove less important columns
+# 
+# skip = c(                                                                                             
+#   "GDP corresponding to fiscal year, current prices-National currency-Billions",                 
+#   "GDP per capita, constant prices-National currency-Units",                                              
+#   "GDP per capita, current prices-National currency-Units",                                                 
+#   "GDP, constant prices-National currency-Billions",                                                          
+#   "GDP, current prices-National currency-Billions",                                                     
+#   "General government gross debt-National currency-Billions",                        
+#   "General government net debt-National currency-Billions",                      
+#   "General government net lending/borrowing-National currency-Billions",          
+#   "General government primary net lending/borrowing-National currency-Billions",            
+#   "General government revenue-National currency-Billions",                              
+#   "General government structural balance-National currency-Billions",                               
+#   "General government total expenditure-National currency-Billions",                                        
+#   "Implied PPP conversion rate-National currency per current international dollar-"                          
+# )
+# 
+# df.dcast <- df.dcast[, !(names(df.dcast) %in% skip)]
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -210,3 +214,74 @@ server <- function(input, output) {
 # 
 # Run the application 
 shinyApp(ui = ui, server = server)
+
+# Data source: http://goo.gl/vcKo6y
+UKvisits <- data.frame(origin=c(
+  "France", "Germany", "USA",
+  "Irish Republic", "Netherlands",
+  "Spain", "Italy", "Poland",
+  "Belgium", "Australia", 
+  "Other countries", rep("UK", 5)),
+  visit=c(
+    rep("UK", 11), "Scotland",
+    "Wales", "Northern Ireland", 
+    "England", "London"),
+  weights=c(
+    c(12,10,9,8,6,6,5,4,4,3,33)/100*31.8, 
+    c(2.2,0.9,0.4,12.8,15.5)))
+
+
+
+#sankey examples
+require(googleVis)
+plot(
+  gvisSankey(UKvisits, from="origin", 
+             to="visit", weight="weight",
+             options=list(
+               height=250,
+               sankey="{link:{color:{fill:'lightblue'}}}"
+             ))
+)
+
+require(igraph)
+require(googleVis)
+g <- graph.tree(24, children = 4)
+set.seed(123)
+E(g)$weight = rpois(23, 4) + 1
+edgelist <- get.data.frame(g) 
+colnames(edgelist) <- c("source","target","value")
+edgelist$source <- LETTERS[edgelist$source]
+edgelist$target <- LETTERS[edgelist$target]
+
+plot(
+  gvisSankey(edgelist, from="source", 
+             to="target", weight="value",
+             options=list(
+               sankey="{link: {color: { fill: '#d799ae' } },
+               node: { width: 4, 
+               color: { fill: '#a61d4c' },
+               label: { fontName: 'Times-Roman',
+               fontSize: 14,
+               color: '#871b47',
+               bold: true,
+               italic: true } }}"))
+             )
+
+
+#Sankey plot example from our data
+sk1 <- gvisSankey(data, from="From", to="To", weight="Weight")
+plot(sk1)
+
+data <- data[-7,c('Reporter_code','Partner_code','Value')]
+
+sk2 <- gvisSankey(data, from="Reporter_code", to="Partner_code", weight="Value",
+                  options=list(sankey="{link: {color: { fill: '#d799ae' } },
+                               node: { color: { fill: '#a61d4c' },
+                               label: { color: '#871b47' } }}"))
+plot(sk2)
+
+typeof(data$Reporter_code)
+
+typeof(data$Partner_code)
+
+typeof(data$Value)
