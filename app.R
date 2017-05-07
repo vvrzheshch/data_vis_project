@@ -19,20 +19,27 @@ library(googleCharts) # More info:  https://github.com/jcheng5/googleCharts Inst
 library(plyr)
 
 
-setwd('~/Google Drive/MSAN2017/SPRING_2017/MSAN-622-02_Data_and_Information_Visualization/project/data_vis_project/')
-# setwd('~/workdata/data_vis/data_vis_project/')
+#setwd('~/Google Drive/MSAN2017/SPRING_2017/MSAN-622-02_Data_and_Information_Visualization/project/data_vis_project/')
+setwd('~/workdata/data_vis/data_vis_project/')
 
 df <- read.csv('trade.csv',stringsAsFactors = FALSE)
-df <- df[df$Flow_Code == 'X', ]
+df_export <- df[df$Flow_Code == 'X', ]
+df_import <- df[df$Flow_Code == 'M', ]
+colnames(df_import)[1:4] <- c("Partner_code","Partner_description","Reporter_code","Reporter_description")
 
+new_df <- rbind(df_export,df_import)
+
+new_df_grouped <- aggregate(Value~Reporter_description+Partner_description+Year,new_df,sum)
+
+new_df_grouped <- new_df_grouped[new_df_grouped$Reporter_description != new_df_grouped$Partner_description,]
+new_df_grouped <- new_df_grouped[new_df_grouped$Partner_description != 'World',]
+non_countries <- c("ACP (Africa, Caribbean and Pacific Countries)", "Africa, CIS and Middle East", "Andean Community", "American Samoa", "APEC (Asia-Pacific Economic Cooperation)", "Aruba (the Netherlands with respect to)", "Asia", "Asia excluding Hong Kong re-exports", "Asia less JPN,ANZ,CHN,NICS4, IN", "Australia and New Zealand", "BRIC members", "BRICS members", "CACM (Central American Common Market)", "CARICOM (Caribbean Community)",  "CEMAC (Economic and Monetary Community of Central Africa)", "Chinese Taipei", "COMESA (Common Market for Eastern and Southern Africa)", "Commonwealth of Independent States (CIS)", "Czech and Slovak Fed. Rep., former", "Developing and Emerging Economies", "ECCAS (Economic Community of Central African States)", "ECOWAS (Economic Community of West African States)", "EFTA (European Free Trade Association)", "Europe (Indices only)", "Europe excluding EU(28) intra-trade", "European Union (12)", "European Union (15)", "European Union (27)", "European Union (28)", "Four East Asian traders", "French Southern and Antarctic Territory", "French Guiana", "French Polynesia", "G20 - Developed Economies", "G20 - Developed Economies excl EU", "G20 - Developing economies", "G20 Members", "G20 Members exc. EU incl.FR, DE,IT,UK", "GCC (Gulf Co-operation Council)", "German Dem. Rep., former", "LDC (Least developed countries)", "LDC exporters of agriculture", "LDC exporters of manufactures", "LDC oil exporters", "MERCOSUR (Southern Common Market)", "Middle East", "NAFTA (North American Free Trade Agreement)", "Netherlands Antilles", "North America", "SADC (Southern African Development Community)", "SAFTA (South Asian Free Trade Agreement)", "South Africa", "South America excluding Brazil", "South and Central America", "Switzerland (Excl. Gold)", "WAEMU (West African Economic and Monetary Union)", "World", "World (only indices- excluding HK RX and CH Gold)", "World excluding EU(28) intra-trade", "WTO Members 2015", "WTO Members 2015 Incl. HK RX", "Developing Asia excluding Hong Kong re-exports", "ASEAN (Association of South East Asian Nations)",'Other CIS (CIS11)')
+new_df_grouped <- new_df_grouped[!(new_df_grouped$Reporter_description %in% non_countries),]
+df_sankey <- new_df_grouped[!(new_df_grouped$Partner_description %in% non_countries),]
+df_sankey <- na.omit(df_sankey)
 # Clean up the data for Sankey plot (remove regions to avoid cycling)
-non_countries <- c("ACP (Africa, Caribbean and Pacific Countries)", "Africa", "Africa, CIS and Middle East", "Andean Community", "American Samoa", "APEC (Asia-Pacific Economic Cooperation)", "Aruba (the Netherlands with respect to)", "Asia", "Asia excluding Hong Kong re-exports", "Asia less JPN,ANZ,CHN,NICS4, IN", "Australia and New Zealand", "BRIC members", "BRICS members", "CACM (Central American Common Market)", "CARICOM (Caribbean Community)",  "CEMAC (Economic and Monetary Community of Central Africa)", "Chinese Taipei", "COMESA (Common Market for Eastern and Southern Africa)", "Commonwealth of Independent States (CIS)", "Czech and Slovak Fed. Rep., former", "Developing and Emerging Economies", "ECCAS (Economic Community of Central African States)", "ECOWAS (Economic Community of West African States)", "EFTA (European Free Trade Association)", "Europe", "Europe (Indices only)", "Europe excluding EU(28) intra-trade", "European Union (12)", "European Union (15)", "European Union (27)", "European Union (28)", "Four East Asian traders", "French Southern and Antarctic Territory", "French Guiana", "French Polynesia", "G20 - Developed Economies", "G20 - Developed Economies excl EU", "G20 - Developing economies", "G20 Members", "G20 Members exc. EU incl.FR, DE,IT,UK", "GCC (Gulf Co-operation Council)", "German Dem. Rep., former", "LDC (Least developed countries)", "LDC exporters of agriculture", "LDC exporters of manufactures", "LDC oil exporters", "MERCOSUR (Southern Common Market)", "Middle East", "NAFTA (North American Free Trade Agreement)", "Netherlands Antilles", "North America", "SADC (Southern African Development Community)", "SAFTA (South Asian Free Trade Agreement)", "South Africa", "South America excluding Brazil", "South and Central America", "Switzerland (Excl. Gold)", "WAEMU (West African Economic and Monetary Union)", "World", "World (only indices- excluding HK RX and CH Gold)", "World excluding EU(28) intra-trade", "WTO Members 2015", "WTO Members 2015 Incl. HK RX", "Developing Asia excluding Hong Kong re-exports", "ASEAN (Association of South East Asian Nations)")
-df_sankey <- df[
-  !(df$Reporter_description %in% non_countries)
-  # !(df$Partner_description %in% non_countries) &
-  & (df$Reporter_description != df$Partner_description)
-  & (df$Partner_description != 'World')
-    , c('Reporter_description','Partner_description','Value', 'Year')]
+df_sankey$Partner_description <- paste0(df_sankey$Partner_description,' ')
+
 
 # Define UI for application that plot the data
 ui <- fluidPage(
@@ -65,7 +72,7 @@ ui <- fluidPage(
      fluidRow(
        shiny::column(4, offset = 4,
                      sliderInput("year", "Year", min = min(df$Year), max = max(df$Year),
-                                 value = max(df$Year)-5, animate = TRUE, step = 1, sep = ""),
+                                 value = max(df_sankey$Year)-5, animate = TRUE, step = 1, sep = ""),
            selectInput("x", label = h3("Select x-axis:"), choices = unique(df$Reporter_description)), #choices = unique(df$Subject)
            selectInput("y", label = h3("Select y-axis:"), choices = unique(df$Partner_description))#, selected = "Employment")
        )
@@ -85,14 +92,14 @@ ui <- fluidPage(
 
 # Define server logic required to plot the dataset
 server <- function(input, output) {
-  sub_df <- reactive({df[df$Year == input$year, ]})
+ # sub_df <- reactive({df_sankey[df_sankey$Year == input$year, ]})
   sub_df_sankey <- reactive({
-    df_sankey_year <- df_sankey[df_sankey$Year == input$year, c('Reporter_description','Partner_description','Value')]
+    df_sankey_year <- na.omit(df_sankey[df_sankey$Year == input$year, c('Reporter_description','Partner_description','Value')])
     # df_sankey_year <- df_sankey[df_sankey$Year == input$year, c('Reporter_description','Partner_description','Value')]
-    # df_sankey_year[!(df_sankey_year$Partner_description %in% unique(df_sankey_year$Reporter_description)), ]
+    #df_sankey_year[!(df_sankey_year$Partner_description %in% unique(df_sankey_year$Reporter_description)), ]
     # df_sankey_year_countries#[1:min(100,nrow(df_sankey_year_countries)), ]
     # df_sankey_year[, c('Reporter_description','Partner_description')]
-    df_sankey_year
+    # df_sankey_year
     # dcast(df_sankey_year, Reporter_description + Partner_description ~ Value, sum)
     })
    
@@ -146,7 +153,7 @@ server <- function(input, output) {
 
   
   output$description <- renderText({
-    names(sub_df_sankey())
+    nrow(sub_df_sankey()[, 1:2]) - nrow(unique(sub_df_sankey()[, 1:2]))
   })
   
   output$table <- renderDataTable(sub_df_sankey())
