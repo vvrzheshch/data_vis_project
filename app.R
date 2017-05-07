@@ -23,16 +23,38 @@ library(googleCharts)
 # library(plyr)
 
 
-#setwd('~/Google Drive/MSAN2017/SPRING_2017/MSAN-622-02_Data_and_Information_Visualization/project/data_vis_project/')
-setwd('~/workdata/data_vis/data_vis_project/')
+setwd('~/Google Drive/MSAN2017/SPRING_2017/MSAN-622-02_Data_and_Information_Visualization/project/data_vis_project/')
+# setwd('~/workdata/data_vis/data_vis_project/')
 # df <- read.csv('WEOApr2017all.xls', sep = "\t", stringsAsFactors = F, na.strings = c("NA", "", "--"))
 
 df <- read.csv('trade.csv',stringsAsFactors = FALSE)
+non_countries <- c("ACP (Africa, Caribbean and Pacific Countries)", "Africa", "Africa, CIS and Middle East", 
+                   "Andean Community", "American Samoa", "APEC (Asia-Pacific Economic Cooperation)", "Aruba (the Netherlands with respect to)",
+                   "Asia", "Asia excluding Hong Kong re-exports", "Asia less JPN,ANZ,CHN,NICS4, IN", "Australia and New Zealand",
+                   "BRIC members", "BRICS members", "CACM (Central American Common Market)", "CARICOM (Caribbean Community)", 
+                   "CEMAC (Economic and Monetary Community of Central Africa)", "Chinese Taipei", "COMESA (Common Market for Eastern and Southern Africa)",
+                   "Commonwealth of Independent States (CIS)", "Czech and Slovak Fed. Rep., former", "Developing and Emerging Economies",
+                   "ECCAS (Economic Community of Central African States)", "ECOWAS (Economic Community of West African States)",
+                   "EFTA (European Free Trade Association)", "Europe", "Europe (Indices only)", "Europe excluding EU(28) intra-trade",
+                   "European Union (12)", "European Union (15)", "European Union (27)", "European Union (28)",
+                   "Four East Asian traders", "French Southern and Antarctic Territory", "French Guiana", "French Polynesia",
+                   "G20 - Developed Economies", "G20 - Developed Economies excl EU", "G20 - Developing economies", "G20 Members",                                        
+                   "G20 Members exc. EU incl.FR, DE,IT,UK", "GCC (Gulf Co-operation Council)", "German Dem. Rep., former",
+                   "LDC (Least developed countries)", "LDC exporters of agriculture", "LDC exporters of manufactures",
+                   "LDC oil exporters", "MERCOSUR (Southern Common Market)", "Middle East", "NAFTA (North American Free Trade Agreement)",
+                   "Netherlands Antilles", "North America", "SADC (Southern African Development Community)", "SAFTA (South Asian Free Trade Agreement)",
+                   "South Africa", "South America excluding Brazil", "South and Central America", "Switzerland (Excl. Gold)",
+                   "WAEMU (West African Economic and Monetary Union)",
+                   "World", "World (only indices- excluding HK RX and CH Gold)", "World excluding EU(28) intra-trade",
+                   "WTO Members 2015", "WTO Members 2015 Incl. HK RX", "Developing Asia excluding Hong Kong re-exports",
+                   "ASEAN (Association of South East Asian Nations)")
+df <- df[!(df$Reporter_description %in% non_countries), ]
+unique(df$Reporter_description)
 
-df <- df[df$Flow_Code == 'X',c('Reporter_code','Partner_code','Value')]
-data <- df[sample(nrow(df), 50), ]
 
-plot(data$Report_code, data$Value)
+df <- df[df$Flow_Code == 'X',c('Reporter_description','Partner_description','Value', 'Year')]
+#data <- df[sample(nrow(df), 50), ]
+data <- df
 
 unique(data$Partner_code)
 unique(data$Partner_description)
@@ -269,8 +291,18 @@ plot(
 
 
 #Sankey plot example from our data
-sk1 <- gvisSankey(data, from="From", to="To", weight="Weight")
+
+# data2 <- data[!(data$Reporter_code %in% unique(data$Partner_code)) & data$Year == '2010', c('Reporter_code','Partner_code','Value')]
+# data2 <- data[!(data$Partner_description %in% unique(data$Reporter_description)) & data$Year == '2010' & data$Partner_description != 'World', c('Reporter_description','Partner_description','Value')]
+# data2 <- data[!(data$Report_description %in% unique(data$Partner_description)) & data$Year == '2010' & data$Partner_description != 'World', c('Reporter_description','Partner_description','Value')]
+data2 <- data[!(data$Partner_description %in% unique(data$Reporter_description)) & data$Year == '2012' & data$Partner_description != 'World', ]
+data3 <- data2[order(-data2$Value), ]
+data4 <- data3[1:50, ]
+
+sk1 <- gvisSankey(data2, from="From", to="To", weight="Weight")
 plot(sk1)
+
+
 
 data <- data[-7,c('Reporter_code','Partner_code','Value')]
 
