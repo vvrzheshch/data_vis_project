@@ -21,6 +21,8 @@ library(treemap)
 library(d3treeR)
 library(shinydashboard) # http://fontawesome.io/icons/
 
+jet.colors <- colorRampPalette(c("#00007F", "blue", "#007FFF", "cyan",
+                     "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000"))
 
 setwd('~/Google Drive/MSAN2017/SPRING_2017/MSAN-622-02_Data_and_Information_Visualization/project/data_vis_project/')
 # setwd('~/workdata/data_vis/data_vis_project/')
@@ -29,12 +31,7 @@ df <- read.csv('trade.csv',stringsAsFactors = FALSE)
 df <- df[df$Year >= 2000, ]
 
 # Convert names to ASCII
-df$Reporter_description <-iconv(df$Reporter_description, "latin1", "ASCII", "")  
-
-# Prepare data for Tree Map
-  df_tree <- df[df$Indicator_description != "Total merchandise", c("Reporter_description", "Indicator_description", "Flow_Description", "Year", "Value")]
-  df_tree <- aggregate(Value ~ Reporter_description + Indicator_description + Flow_Description + Year,
-                       df_tree, sum)
+df$Reporter_description <- iconv(df$Reporter_description, "latin1", "ASCII", "")  
   
 
 # Prepare data for Sankey plot
@@ -50,7 +47,22 @@ df$Reporter_description <-iconv(df$Reporter_description, "latin1", "ASCII", "")
   df_sankey$Partner_description <- paste0(df_sankey$Partner_description,' ')
   # df_sankey <- df_sankey[order(df_sankey$Reporter_description), ]
 
-  
+# Prepare data for Tree Map
+  df_tree <- df[df$Indicator_description != "Total merchandise"
+                & !(df$Reporter_description %in% non_countries)
+                & !(df$Reporter_description %in% non_countries_2),
+                c("Reporter_description", "Indicator_description", "Flow_Description", "Year", "Value")]
+  df_tree <- aggregate(Value ~ Reporter_description + Indicator_description + Flow_Description + Year,
+                       df_tree, sum)
+
+# Prepare data for World Map
+  df_map <- df[#df$Indicator_description == "Total merchandise"
+               !(df$Reporter_description %in% non_countries)
+               & !(df$Reporter_description %in% non_countries_2)
+                , c("Reporter_code", "Reporter_description", "Indicator_description", "Flow_Description", "Year", "Value")]
+  df_map <- aggregate(Value ~ Reporter_code  + Indicator_description + Reporter_description + Flow_Description + Year,
+                      df_map, sum)
+     
 ui <- dashboardPage(
     dashboardHeader(title = "World Trade"),
     dashboardSidebar(
@@ -62,28 +74,35 @@ ui <- dashboardPage(
                          radioButtons("radio.right", "Right:", c("Countries" = "Countries", "Regions" = "Regions"), selected="Regions")
           ),
         menuItem("Map", tabName = "globe", icon = icon("globe")),
+        conditionalPanel("input.sidebarmenu === 'globe'",
+                         radioButtons("radio.globe", "Flow Type:", c("Exports"="Exports", "Imports"="Imports")),
+                         selectInput("ind.globe", "Indicator:", unique(df_map$Indicator_description))
+                         # selectInput("ind.globe", "Indicator:", unique(df_map$Indicator_description)),
+          ),
         menuItem("Tree Map", tabName = "treemap", icon = icon("columns")),
-        sliderInput("year", "Year", min = min(df$Year), max = max(df$Year), value = max(df$Year)-5, animate = TRUE, step = 1, sep = "")
+        sliderInput("year", "Year", min = min(df$Year), max = max(df$Year), value = max(df$Year)-4, animate = TRUE, step = 1, sep = "")
       )
     ),
     dashboardBody(
       tabItems(
         # First tab content
         tabItem(tabName = "sankey",
-                fluidRow(
-                  box(htmlOutput("sankey.plot"), height = 0, width = 0 
+                #fluidRow(
+                  #box(
+                    htmlOutput("sankey.plot")#, height = 0, width = 0 
                   # box(plotOutput("plot1", height = 600)),
                   # box(
                   #   title = "Controls",
                   #   sliderInput("slider", "Number of observations:", 1, 100, 50)
-                  )
-                )
+                  #)
+                #)
         ),
-        
         # Second tab content
+        tabItem(tabName = "treemap",
+                d3tree2Output("d3tree")
+              ),
         tabItem(tabName = "globe",
-                h2("Widgets tab content")
-        )
+                htmlOutput("map"))
       )
     )
   )
@@ -92,6 +111,13 @@ ui <- dashboardPage(
 server <- function(input, output) {
  # sub_df <- reactive({df_sankey[df_sankey$Year == input$year, ]})
 
+  sub_df_map <- reactive({
+    df_map[df_map$Year == input$year
+           & df_map$Flow_Description == input$radio.globe
+           & df_map$Indicator_description == input$ind.globe
+           , ]
+  })
+  
   sub_df_tree <- reactive({
     df_tree[df_tree$Year == input$year, ]
   })
@@ -137,12 +163,19 @@ server <- function(input, output) {
   #     )
   #   })
 
-  # output$map <- renderGvis({
-  #   # subset <- df.dcast[df.dcast$year == input$year,c("Country","Population")]
-  #   map <- gvisGeoChart(sub_df(), locationvar="Country",
-  #                  colorvar=input$x,
-  #                  options=list(projection="kavrayskiy-vii", displayMode="regions",height = 600, width = 900))
-  #   return(map)})
+  output$map <- renderGvis({
+    # subset <- df.dcast[df.dcast$year == input$year,c("Country","Population")]
+    map <- gvisGeoChart(sub_df_map(), 
+                        #locationvar="Reporter_description",
+                        locationvar="Reporter_code",
+                        hovervar = "Reporter_description",
+                   colorvar='Value',
+                   options=list(projection="kavrayskiy-vii", 
+                                displayMode="regions",  height = 600, width = 900
+                                ,colorAxis="{colors: ['orange']}"
+                                )
+                   )
+    return(map)})
 
   # output$plot <- renderGvis({
   #   Sankey = gvisSankey(DataF,from="From", to="To", weight="Ponder",
@@ -156,7 +189,15 @@ server <- function(input, output) {
 
   output$sankey.plot <- renderGvis({
     gvisSankey(sub_df_sankey(), from="Reporter_description", to="Partner_description", weight="Value"
-                           , options=list(height = 600, width = 900)
+                            , options = list(height = 600, width = 900,
+                                            #height = '200%', #width = '200%',
+                              # colors = "['#a6cee3', '#b2df8a', '#fb9a99', '#fdbf6f', '#cab2d6', '#ffff99', '#1f78b4', '#33a02c']",
+                              sankey="{
+                                link:{color:{fill:'lightblue', stroke: 'black', strokeWidth: .1}},
+                              }")
+               #node: { color: "['#a6cee3', '#b2df8a', '#fb9a99', '#fdbf6f', '#cab2d6', '#ffff99', '#1f78b4', '#33a02c']"},
+               
+                           #, options=list(height = 600, width = 900)
               )
     })
 
@@ -170,7 +211,8 @@ server <- function(input, output) {
   output$d3tree <- renderD3tree2({
     m <- sub_df_tree()
     tm <- treemap(
-      m[1:200, ],
+      m[1:1000, ],
+      # m,
       # m[m$year >= input$year.start, ],
       # index=c("Reporter_description", "Indicator_code"),
       index=c("Reporter_description", "Flow_Description", "Indicator_description"),
